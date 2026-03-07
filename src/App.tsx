@@ -7,6 +7,10 @@ import { RoutineView } from './pages/RoutineView';
 function App() {
   const store = useStore();
 
+  if (store.loading) {
+    return <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>Loading…</div>;
+  }
+
   return (
     <BrowserRouter>
       <div className="app">
