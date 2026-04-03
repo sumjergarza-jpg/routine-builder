@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Routine, Exercise } from '../data/types';
 import { type Filters, emptyFilters } from '../store/useStore';
@@ -16,13 +16,11 @@ interface Props {
   getExercise: (id: string) => Exercise | undefined;
   addExerciseToRoutine: (routineId: string, exerciseId: string) => void;
   removeExerciseFromRoutine: (routineId: string, exerciseId: string) => void;
-  updateRoutine: (id: string, updates: Partial<Pick<Routine, 'title'>>) => void;
-  updateDescription: (routineId: string, description: string) => void;
 }
 
 function IconPlayCircle() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <polygon points="10 8 16 12 10 16 10 8" />
     </svg>
@@ -39,31 +37,60 @@ function IconLayers() {
   );
 }
 
+function IconArrowUp() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
 export function RoutineBuilder({
   routines,
   filterExercises,
   getExercise,
   addExerciseToRoutine,
   removeExerciseFromRoutine,
-  updateRoutine,
-  updateDescription,
 }: Props) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
+  const sequenceRef = useRef<HTMLDivElement>(null);
+
+  usePageTitle('Build Routine');
 
   const routine = routines.find(r => r.id === id);
-  const [editTitle, setEditTitle] = useState(routine?.title ?? '');
-  const [notes, setNotes] = useState(routine?.description ?? '');
-  usePageTitle('Build Routine');
 
   const exercises = useMemo(
     () => [...filterExercises(filters)].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name))),
     [filterExercises, filters],
   );
   const addedIds = new Set(routine?.exercises.map(e => e.exerciseId) ?? []);
+
+  // Sticky bar: show when sequence section scrolls above visible area (mobile)
+  useEffect(() => {
+    const scrollEl = document.querySelector('.app-content');
+    if (!scrollEl) return;
+
+    const check = () => {
+      if (!sequenceRef.current) return;
+      const rect = sequenceRef.current.getBoundingClientRect();
+      // 54px = TopNav height; hide bar if sequence is still on screen
+      setShowStickyBar(rect.bottom < 54);
+    };
+
+    scrollEl.addEventListener('scroll', check, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', check);
+  }, []);
+
+  const scrollToSequence = () => {
+    sequenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   if (!routine) {
     return (
@@ -74,47 +101,13 @@ export function RoutineBuilder({
     );
   }
 
-  const handleSave = () => {
-    if (!editTitle.trim()) return;
-    updateRoutine(routine.id, { title: editTitle.trim() });
-    updateDescription(routine.id, notes);
-    navigate(`/routine/${routine.id}`);
-  };
-
   return (
     <div className="builder-layout">
-      {/* LEFT PANEL — form + sequence (no nav links, those are in TopNav) */}
+      {/* LEFT PANEL — sequence + next action */}
       <aside className="builder-sidebar">
-        <div className="sidebar-form">
-          <h2 className="sidebar-form-title">Build a Routine</h2>
-          <p className="sidebar-form-subtitle">Tap + on any exercise to add it.</p>
 
-          <input
-            type="text"
-            className="routine-name-input"
-            placeholder="Routine name..."
-            value={editTitle}
-            onChange={e => setEditTitle(e.target.value)}
-          />
-
-          <textarea
-            className="routine-notes-input"
-            placeholder="Notes or class intention..."
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-          />
-
-          <button
-            className="btn btn-primary save-routine-btn"
-            onClick={handleSave}
-            disabled={!editTitle.trim()}
-          >
-            Next →
-          </button>
-        </div>
-
-        {/* Sequence */}
-        <div className="sequence-section">
+        {/* Sequence card */}
+        <div className="sequence-section" ref={sequenceRef}>
           <div className="sequence-header">
             <IconPlayCircle />
             <span>Sequence</span>
@@ -124,7 +117,7 @@ export function RoutineBuilder({
           {routine.exercises.length === 0 ? (
             <div className="sequence-empty">
               <span className="sequence-empty-icon"><IconLayers /></span>
-              <p>No exercises yet. Browse the library on the right and tap + to add them here.</p>
+              <p>Tap any exercise to add it to your sequence.</p>
             </div>
           ) : (
             <div className="sequence-items">
@@ -138,6 +131,7 @@ export function RoutineBuilder({
                     <button
                       className="sequence-item-remove"
                       onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
+                      aria-label={`Remove ${ex.name}`}
                     >×</button>
                   </div>
                 );
@@ -145,9 +139,20 @@ export function RoutineBuilder({
             </div>
           )}
         </div>
+
+        {/* Next action — lives directly under sequence */}
+        <div className="sequence-next-wrap">
+          <button
+            className="btn btn-primary sequence-next-btn"
+            onClick={() => navigate(`/routine/${routine.id}`)}
+          >
+            Next →
+          </button>
+        </div>
+
       </aside>
 
-      {/* RIGHT PANEL */}
+      {/* RIGHT PANEL — filter + exercise list */}
       <main className="builder-main">
         <FilterPanel
           filters={filters}
@@ -180,6 +185,23 @@ export function RoutineBuilder({
           )}
         </div>
       </main>
+
+      {/* Sticky sequence bar — mobile only, shown when sequence scrolls off screen */}
+      {showStickyBar && (
+        <button className="sequence-sticky-bar" onClick={scrollToSequence}>
+          <IconPlayCircle />
+          <span>
+            Sequence
+            {routine.exercises.length > 0 && (
+              <strong> ({routine.exercises.length})</strong>
+            )}
+          </span>
+          <span className="sequence-sticky-tap">
+            <IconArrowUp />
+            Tap to view
+          </span>
+        </button>
+      )}
 
       {/* Exercise detail modal */}
       {selectedExercise && (

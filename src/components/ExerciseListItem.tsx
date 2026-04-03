@@ -1,5 +1,5 @@
 import type { Exercise } from '../data/types';
-import { equipmentLabels, focusLabels, difficultyLabels } from '../data/labels';
+import { equipmentLabels, focusLabels } from '../data/labels';
 
 interface Props {
   exercise: Exercise;
@@ -54,7 +54,6 @@ export function ExerciseListItem({ exercise, added, onToggle, onInfo }: Props) {
             {focusLabels[f]}
           </span>
         ))}
-        <span className="exl-difficulty">{difficultyLabels[exercise.difficulty]}</span>
       </div>
 
       {/* Info icon */}
