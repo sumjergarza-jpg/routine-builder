@@ -78,9 +78,10 @@ export function RoutineBuilder({
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // Short distance threshold — drag activates immediately on slight movement
+  // Press-and-hold: wait 150ms before drag activates; if pointer drifts >8px
+  // during that window (user is scrolling), the drag is cancelled.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

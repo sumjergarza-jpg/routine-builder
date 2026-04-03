@@ -26,6 +26,7 @@ export function SortablePanelItem({ id, name, index, onRemove }: Props) {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -41,16 +42,19 @@ export function SortablePanelItem({ id, name, index, onRemove }: Props) {
       ref={setNodeRef}
       style={style}
       className={`seq-panel-item${isDragging ? ' seq-panel-item-dragging' : ''}`}
-      /* Listeners on the full row — drag activates from anywhere */
       {...attributes}
-      {...listeners}
     >
-      {/* Grip handle — visual cue only, drag works from full row */}
-      <span className="seq-panel-grip" aria-hidden="true">
+      {/* Drag zone — left ~25% of row, larger than the grip dots */}
+      <span
+        ref={setActivatorNodeRef}
+        className="seq-panel-drag-zone"
+        {...listeners}
+        aria-label="Drag to reorder"
+      >
         <IconGrip />
       </span>
 
-      {/* Index + name */}
+      {/* Index + name — no drag listeners here, stays scroll-safe */}
       <span className="seq-panel-item-num">{index + 1}</span>
       <span className="seq-panel-item-name">{name}</span>
 

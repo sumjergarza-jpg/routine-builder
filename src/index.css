@@ -738,15 +738,14 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 16px;
+  /* No left padding — drag zone owns that space */
+  padding: 11px 16px 11px 0;
   border-bottom: 1px solid var(--color-border);
   background: white;
-  touch-action: none; /* required for dnd-kit on mobile */
+  /* No touch-action: none here — scroll must work on the right portion */
   user-select: none;
-  cursor: grab;
 }
 .seq-panel-item:last-child { border-bottom: none; }
-.seq-panel-item:active { cursor: grabbing; }
 
 .seq-panel-item-dragging {
   background: white;
@@ -754,15 +753,23 @@ body {
   border-radius: 8px;
   border-color: transparent;
   z-index: 10;
-  cursor: grabbing;
 }
 
-.seq-panel-grip {
-  flex-shrink: 0;
-  color: #c4c0bb;
+/* Left drag zone — wider invisible hit target around the grip dots.
+   touch-action: none is set here (and only here) by dnd-kit's listeners,
+   so scroll remains functional on the rest of the row. */
+.seq-panel-drag-zone {
   display: flex;
   align-items: center;
+  justify-content: center;
+  /* ~25% of the panel width: fixed 60px covers grip + generous margin */
+  width: 60px;
+  flex-shrink: 0;
+  align-self: stretch;   /* full row height — taller tap target */
+  cursor: grab;
+  color: #c4c0bb;
 }
+.seq-panel-drag-zone:active { cursor: grabbing; }
 
 .seq-panel-item-num {
   display: inline-flex;
