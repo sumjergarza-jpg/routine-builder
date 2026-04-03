@@ -4,6 +4,7 @@ import { equipmentLabels, focusLabels } from '../data/labels';
 interface Props {
   exercise: Exercise;
   added: boolean;
+  selectionIndex?: number;
   onToggle: () => void;
   onInfo: () => void;
 }
@@ -26,7 +27,7 @@ function IconInfo() {
   );
 }
 
-export function ExerciseListItem({ exercise, added, onToggle, onInfo }: Props) {
+export function ExerciseListItem({ exercise, added, selectionIndex, onToggle, onInfo }: Props) {
   return (
     <div
       className={`exl-item${added ? ' exl-item-added' : ''}`}
@@ -39,7 +40,7 @@ export function ExerciseListItem({ exercise, added, onToggle, onInfo }: Props) {
       {/* Circle selection control — fixed width, always present */}
       <span className="exl-circle-col" aria-hidden="true">
         <span className="exl-circle">
-          {added && <IconCheck />}
+          {added && selectionIndex !== undefined ? selectionIndex : null}
         </span>
       </span>
 

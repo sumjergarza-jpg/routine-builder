@@ -520,6 +520,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  padding-bottom: 72px;
 }
 
 /* ===== Sidebar Brand ===== */
@@ -613,9 +614,9 @@ body {
 
 /* ===== Bottom Sequence System (mobile only) ===== */
 
-/* Sticky bar — always visible at bottom on mobile */
+/* Sticky bar — always visible while browsing */
 .seq-bar {
-  display: none; /* mobile only — enabled in @media below */
+  display: flex;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -628,33 +629,13 @@ body {
   box-shadow: 0 -2px 12px rgba(0,0,0,0.18);
 }
 
-.seq-bar-left {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  background: none;
-  border: none;
-  border-right: 1px solid rgba(255,255,255,0.15);
-  color: white;
-  font-family: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  text-align: left;
-}
-.seq-bar-left:active { background: rgba(255,255,255,0.08); }
-
 .seq-bar-count {
+  flex: 1;
+  padding: 0 20px;
   font-weight: 700;
   font-size: 14px;
-}
-
-.seq-bar-expand {
   display: flex;
   align-items: center;
-  margin-left: 6px;
-  opacity: 0.8;
 }
 
 .seq-bar-next {
@@ -1190,6 +1171,8 @@ body {
   background: #1a3d33;
   border-color: #1a3d33;
   color: white;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .exl-name {
@@ -2032,19 +2015,10 @@ body {
     height: auto;
     overflow: visible;
   }
-  /* Hide sidebar on mobile — sequence lives in the bottom panel */
-  .builder-sidebar {
-    display: none;
-  }
   .builder-main {
     height: auto;
     overflow-y: visible;
-    /* Pad bottom so last exercise isn't hidden under the sticky bar */
-    padding-bottom: 72px;
   }
-  /* Enable bottom sequence system on mobile */
-  .seq-bar  { display: flex; }
-  .seq-panel { display: flex; }
   .exercise-grid { grid-template-columns: 1fr 1fr; }
   /* On mobile, hide equipment tag to save space */
   .exl-tags .exl-tag-equipment { display: none; }
