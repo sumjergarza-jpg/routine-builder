@@ -10,7 +10,7 @@ interface Props {
 
 function IconCheck() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -36,9 +36,11 @@ export function ExerciseListItem({ exercise, added, onToggle, onInfo }: Props) {
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' || e.key === ' ' ? (e.preventDefault(), onToggle()) : undefined}
     >
-      {/* Fixed-width selection column — always present to prevent layout shift */}
-      <span className="exl-check-col" aria-hidden="true">
-        {added && <IconCheck />}
+      {/* Circle selection control — fixed width, always present */}
+      <span className="exl-circle-col" aria-hidden="true">
+        <span className="exl-circle">
+          {added && <IconCheck />}
+        </span>
       </span>
 
       {/* Name */}
@@ -56,7 +58,7 @@ export function ExerciseListItem({ exercise, added, onToggle, onInfo }: Props) {
         ))}
       </div>
 
-      {/* Info icon */}
+      {/* Info icon — opens detail modal without toggling */}
       <button
         className="exl-info-btn"
         onClick={e => { e.stopPropagation(); onInfo(); }}

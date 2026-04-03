@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Routine, Exercise } from '../data/types';
 import { type Filters, emptyFilters } from '../store/useStore';
@@ -18,6 +18,16 @@ interface Props {
   removeExerciseFromRoutine: (routineId: string, exerciseId: string) => void;
 }
 
+function IconLayers() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  );
+}
+
 function IconPlayCircle() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -27,21 +37,18 @@ function IconPlayCircle() {
   );
 }
 
-function IconLayers() {
+function IconChevronUp() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 2 7 12 12 22 7 12 2" />
-      <polyline points="2 17 12 22 22 17" />
-      <polyline points="2 12 12 17 22 12" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="18 15 12 9 6 15" />
     </svg>
   );
 }
 
-function IconArrowUp() {
+function IconChevronDown() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   );
 }
@@ -58,9 +65,7 @@ export function RoutineBuilder({
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [showStickyBar, setShowStickyBar] = useState(false);
-
-  const sequenceRef = useRef<HTMLDivElement>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   usePageTitle('Build Routine');
 
@@ -72,26 +77,6 @@ export function RoutineBuilder({
   );
   const addedIds = new Set(routine?.exercises.map(e => e.exerciseId) ?? []);
 
-  // Sticky bar: show when sequence section scrolls above visible area (mobile)
-  useEffect(() => {
-    const scrollEl = document.querySelector('.app-content');
-    if (!scrollEl) return;
-
-    const check = () => {
-      if (!sequenceRef.current) return;
-      const rect = sequenceRef.current.getBoundingClientRect();
-      // 54px = TopNav height; hide bar if sequence is still on screen
-      setShowStickyBar(rect.bottom < 54);
-    };
-
-    scrollEl.addEventListener('scroll', check, { passive: true });
-    return () => scrollEl.removeEventListener('scroll', check);
-  }, []);
-
-  const scrollToSequence = () => {
-    sequenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   if (!routine) {
     return (
       <div className="page">
@@ -101,20 +86,21 @@ export function RoutineBuilder({
     );
   }
 
+  const count = routine.exercises.length;
+
   return (
     <div className="builder-layout">
-      {/* LEFT PANEL — sequence + next action */}
-      <aside className="builder-sidebar">
 
-        {/* Sequence card */}
-        <div className="sequence-section" ref={sequenceRef}>
+      {/* ── LEFT PANEL: sequence + next (desktop only) ── */}
+      <aside className="builder-sidebar">
+        <div className="sequence-section">
           <div className="sequence-header">
             <IconPlayCircle />
             <span>Sequence</span>
-            <span className="sequence-count">{routine.exercises.length}</span>
+            <span className="sequence-count">{count}</span>
           </div>
 
-          {routine.exercises.length === 0 ? (
+          {count === 0 ? (
             <div className="sequence-empty">
               <span className="sequence-empty-icon"><IconLayers /></span>
               <p>Tap any exercise to add it to your sequence.</p>
@@ -140,7 +126,6 @@ export function RoutineBuilder({
           )}
         </div>
 
-        {/* Next action — lives directly under sequence */}
         <div className="sequence-next-wrap">
           <button
             className="btn btn-primary sequence-next-btn"
@@ -149,10 +134,9 @@ export function RoutineBuilder({
             Next →
           </button>
         </div>
-
       </aside>
 
-      {/* RIGHT PANEL — filter + exercise list */}
+      {/* ── RIGHT PANEL: filter + exercise list ── */}
       <main className="builder-main">
         <FilterPanel
           filters={filters}
@@ -186,22 +170,77 @@ export function RoutineBuilder({
         </div>
       </main>
 
-      {/* Sticky sequence bar — mobile only, shown when sequence scrolls off screen */}
-      {showStickyBar && (
-        <button className="sequence-sticky-bar" onClick={scrollToSequence}>
-          <IconPlayCircle />
-          <span>
+      {/* ── BOTTOM SEQUENCE SYSTEM (mobile only) ── */}
+
+      {/* Slide-up panel — always in DOM for smooth CSS animation */}
+      <div className={`seq-panel${isPanelOpen ? ' seq-panel-open' : ''}`} aria-hidden={!isPanelOpen}>
+        <div className="seq-panel-header" onClick={() => setIsPanelOpen(false)}>
+          <span className="seq-panel-title">
+            <IconPlayCircle />
             Sequence
-            {routine.exercises.length > 0 && (
-              <strong> ({routine.exercises.length})</strong>
-            )}
+            {count > 0 && <span className="sequence-count">{count}</span>}
           </span>
-          <span className="sequence-sticky-tap">
-            <IconArrowUp />
-            Tap to view
+          <IconChevronDown />
+        </div>
+
+        <div className="seq-panel-body">
+          {count === 0 ? (
+            <div className="seq-panel-empty">
+              <p>No exercises yet — tap any exercise below to add it.</p>
+            </div>
+          ) : (
+            <div className="sequence-items">
+              {routine.exercises.map((re, i) => {
+                const ex = getExercise(re.exerciseId);
+                if (!ex) return null;
+                return (
+                  <div key={re.exerciseId} className="sequence-item">
+                    <span className="sequence-item-num">{i + 1}</span>
+                    <span className="sequence-item-name">{ex.name}</span>
+                    <button
+                      className="sequence-item-remove"
+                      onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
+                      aria-label={`Remove ${ex.name}`}
+                    >×</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="seq-panel-footer">
+          <button
+            className="btn btn-primary seq-panel-next-btn"
+            onClick={() => navigate(`/routine/${routine.id}`)}
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+
+      {/* Sticky bottom bar — always visible on mobile */}
+      <div className="seq-bar">
+        <button
+          className="seq-bar-left"
+          onClick={() => setIsPanelOpen(v => !v)}
+          aria-expanded={isPanelOpen}
+        >
+          <span className="seq-bar-count">
+            {count} Exercise{count !== 1 ? 's' : ''}
+          </span>
+          <span className="seq-bar-expand">
+            {isPanelOpen ? 'Collapse' : 'Expand'}
+            {isPanelOpen ? <IconChevronDown /> : <IconChevronUp />}
           </span>
         </button>
-      )}
+        <button
+          className="seq-bar-next"
+          onClick={() => navigate(`/routine/${routine.id}`)}
+        >
+          Next →
+        </button>
+      </div>
 
       {/* Exercise detail modal */}
       {selectedExercise && (
