@@ -60,42 +60,41 @@ export function FilterPanel({ filters, onChange, open, onToggle }: Props) {
   const hasActiveFilters = filters.equipment || filters.position || filters.difficulty || filters.focus || filters.contraindications.length > 0;
 
   return (
-    <>
-      <div className="catalog-header">
-        <button
-          className={`catalog-filter-btn${open ? ' active' : ''}`}
-          onClick={onToggle}
-        >
-          <IconFilter />
-          Filter Exercises
-          {hasActiveFilters && (
-            <span style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: 'var(--color-primary)',
-              display: 'inline-block',
-              marginLeft: 2,
-            }} />
-          )}
-        </button>
+    <div className="catalog-header">
+      <button
+        className={`catalog-filter-btn${open ? ' active' : ''}`}
+        onClick={onToggle}
+      >
+        <IconFilter />
+        Filter Exercises
+        {hasActiveFilters && (
+          <span style={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: 'var(--color-primary)',
+            display: 'inline-block',
+            marginLeft: 2,
+          }} />
+        )}
+      </button>
 
-        <div className="catalog-search">
-          <span className="catalog-search-icon"><IconSearch /></span>
-          <input
-            type="text"
-            className="catalog-search-input"
-            placeholder="Search exercises..."
-            value={filters.search}
-            onChange={e => set('search', e.target.value)}
-          />
-        </div>
-
-        <button className="catalog-chevron-btn" onClick={onToggle}>
-          <IconChevron open={open} />
-        </button>
+      <div className="catalog-search">
+        <span className="catalog-search-icon"><IconSearch /></span>
+        <input
+          type="text"
+          className="catalog-search-input"
+          placeholder="Search exercises..."
+          value={filters.search}
+          onChange={e => set('search', e.target.value)}
+        />
       </div>
 
+      <button className="catalog-chevron-btn" onClick={onToggle}>
+        <IconChevron open={open} />
+      </button>
+
+      {/* Dropdown overlay — absolutely positioned so it floats over the list without shifting content */}
       {open && (
         <div className="catalog-filter-body">
           <div className="filter-group">
@@ -165,6 +164,6 @@ export function FilterPanel({ filters, onChange, open, onToggle }: Props) {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

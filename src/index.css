@@ -996,6 +996,8 @@ body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  /* Anchor for the absolutely-positioned filter dropdown */
+  isolation: isolate;
 }
 
 .catalog-filter-btn {
@@ -1070,13 +1072,18 @@ body {
 .catalog-chevron-btn:hover { background: var(--color-bg); }
 
 .catalog-filter-body {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
   background: white;
   border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
   padding: 16px 24px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  flex-shrink: 0;
 }
 
 .catalog-filter-body .filter-group:last-of-type {
