@@ -209,14 +209,6 @@ export function RoutineBuilder({
           )}
         </div>
 
-        <div className="seq-panel-footer">
-          <button
-            className="btn btn-primary seq-panel-next-btn"
-            onClick={() => navigate(`/routine/${routine.id}`)}
-          >
-            Next →
-          </button>
-        </div>
       </div>
 
       {/* Sticky bottom bar — always visible on mobile */}
@@ -230,7 +222,6 @@ export function RoutineBuilder({
             {count} Exercise{count !== 1 ? 's' : ''}
           </span>
           <span className="seq-bar-expand">
-            {isPanelOpen ? 'Collapse' : 'Expand'}
             {isPanelOpen ? <IconChevronDown /> : <IconChevronUp />}
           </span>
         </button>
