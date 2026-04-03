@@ -3,8 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { Routine, Exercise } from '../data/types';
 import { type Filters, emptyFilters } from '../store/useStore';
 import { FilterPanel } from '../components/FilterPanel';
-import { ExerciseCard } from '../components/ExerciseCard';
+import { ExerciseListItem } from '../components/ExerciseListItem';
+import { ExerciseDetailModal } from '../components/ExerciseDetailModal';
 import { usePageTitle } from '../context/NavContext';
+
+/** Sort key that ignores leading "The" for alphabetical ordering. */
+const sortKey = (name: string) => name.replace(/^the\s+/i, '').toLowerCase();
 
 interface Props {
   routines: Routine[];
@@ -48,13 +52,17 @@ export function RoutineBuilder({
   const navigate = useNavigate();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
   const routine = routines.find(r => r.id === id);
   const [editTitle, setEditTitle] = useState(routine?.title ?? '');
   const [notes, setNotes] = useState(routine?.description ?? '');
   usePageTitle('Build Routine');
 
-  const exercises = useMemo(() => filterExercises(filters), [filterExercises, filters]);
+  const exercises = useMemo(
+    () => [...filterExercises(filters)].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name))),
+    [filterExercises, filters],
+  );
   const addedIds = new Set(routine?.exercises.map(e => e.exerciseId) ?? []);
 
   if (!routine) {
@@ -154,19 +162,34 @@ export function RoutineBuilder({
               <p>No exercises match your filters.</p>
             </div>
           ) : (
-            <div className="exercise-grid">
+            <div className="exercise-list">
               {exercises.map(ex => (
-                <ExerciseCard
+                <ExerciseListItem
                   key={ex.id}
                   exercise={ex}
                   added={addedIds.has(ex.id)}
-                  onAdd={() => addExerciseToRoutine(routine.id, ex.id)}
+                  onToggle={() =>
+                    addedIds.has(ex.id)
+                      ? removeExerciseFromRoutine(routine.id, ex.id)
+                      : addExerciseToRoutine(routine.id, ex.id)
+                  }
+                  onInfo={() => setSelectedExercise(ex)}
                 />
               ))}
             </div>
           )}
         </div>
       </main>
+
+      {/* Exercise detail modal */}
+      {selectedExercise && (
+        <ExerciseDetailModal
+          exercise={selectedExercise}
+          added={addedIds.has(selectedExercise.id)}
+          onAdd={() => addExerciseToRoutine(routine.id, selectedExercise.id)}
+          onClose={() => setSelectedExercise(null)}
+        />
+      )}
     </div>
   );
 }
