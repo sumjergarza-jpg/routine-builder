@@ -23,6 +23,13 @@ export interface RoutineExercise {
 export interface Routine {
   id: string;
   title: string;
+  description?: string;
   createdDate: string;
   exercises: RoutineExercise[];
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  routineIds: string[];
 }

@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Exercise, Routine, RoutineExercise, Equipment, Position, Difficulty, MuscleGroup, Contraindication } from '../data/types';
+import type { Exercise, Routine, RoutineExercise, Folder, Equipment, Position, Difficulty, MuscleGroup, Contraindication } from '../data/types';
 import { exercises as seedExercises } from '../data/exercises';
+
+function loadFolders(): Folder[] {
+  try { return JSON.parse(localStorage.getItem('align-folders') || '[]'); }
+  catch { return []; }
+}
+
+function loadDescriptions(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem('align-descriptions') || '{}'); }
+  catch { return {}; }
+}
 
 export interface Filters {
   equipment: Equipment | '';
@@ -32,6 +42,11 @@ export function useStore() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const routinesRef = useRef<Routine[]>([]);
+  const [folders, setFolders] = useState<Folder[]>(() => loadFolders());
+
+  useEffect(() => {
+    localStorage.setItem('align-folders', JSON.stringify(folders));
+  }, [folders]);
 
   useEffect(() => { routinesRef.current = routines; }, [routines]);
 
@@ -39,7 +54,8 @@ export function useStore() {
     fetch('/api/routines')
       .then(r => r.json())
       .then((data: Routine[]) => {
-        setRoutines(data);
+        const descs = loadDescriptions();
+        setRoutines(data.map(r => ({ ...r, description: descs[r.id] })));
         setLoading(false);
       })
       .catch(err => {
@@ -128,17 +144,57 @@ export function useStore() {
     putRoutine(routineId, updated);
   }, []);
 
+  const updateDescription = useCallback((routineId: string, description: string) => {
+    const descs = loadDescriptions();
+    descs[routineId] = description;
+    localStorage.setItem('align-descriptions', JSON.stringify(descs));
+    setRoutines(rs => rs.map(r => r.id === routineId ? { ...r, description } : r));
+  }, []);
+
+  const createFolder = useCallback((name: string): Folder => {
+    const folder: Folder = { id: `folder-${Date.now()}`, name, routineIds: [] };
+    setFolders(fs => [...fs, folder]);
+    return folder;
+  }, []);
+
+  const deleteFolder = useCallback((id: string) => {
+    setFolders(fs => fs.filter(f => f.id !== id));
+  }, []);
+
+  const renameFolder = useCallback((id: string, name: string) => {
+    setFolders(fs => fs.map(f => f.id === id ? { ...f, name } : f));
+  }, []);
+
+  const toggleRoutineInFolder = useCallback((routineId: string, folderId: string) => {
+    setFolders(fs => fs.map(f => {
+      if (f.id !== folderId) return f;
+      const isIn = f.routineIds.includes(routineId);
+      return {
+        ...f,
+        routineIds: isIn
+          ? f.routineIds.filter(id => id !== routineId)
+          : [...f.routineIds, routineId],
+      };
+    }));
+  }, []);
+
   return {
     routines,
     loading,
+    folders,
     exercises: seedExercises,
     getExercise,
     filterExercises,
     createRoutine,
     updateRoutine,
+    updateDescription,
     deleteRoutine,
     addExerciseToRoutine,
     removeExerciseFromRoutine,
     reorderRoutineExercises,
+    createFolder,
+    deleteFolder,
+    renameFolder,
+    toggleRoutineInFolder,
   };
 }
