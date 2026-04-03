@@ -52,6 +52,7 @@ function App() {
                     getExercise={store.getExercise}
                     addExerciseToRoutine={store.addExerciseToRoutine}
                     removeExerciseFromRoutine={store.removeExerciseFromRoutine}
+                    reorderRoutineExercises={store.reorderRoutineExercises}
                   />
                 }
               />

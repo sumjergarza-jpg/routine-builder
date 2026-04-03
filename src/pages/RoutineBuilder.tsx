@@ -1,11 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { Routine, Exercise } from '../data/types';
+import type { Routine, Exercise, RoutineExercise } from '../data/types';
 import { type Filters, emptyFilters } from '../store/useStore';
 import { FilterPanel } from '../components/FilterPanel';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { ExerciseDetailModal } from '../components/ExerciseDetailModal';
+import { SortablePanelItem } from '../components/SortablePanelItem';
 import { usePageTitle } from '../context/NavContext';
+import {
+  DndContext, closestCenter, PointerSensor,
+  KeyboardSensor, useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates,
+  verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
 
 /** Sort key that ignores leading "The" for alphabetical ordering. */
 const sortKey = (name: string) => name.replace(/^the\s+/i, '').toLowerCase();
@@ -16,6 +25,7 @@ interface Props {
   getExercise: (id: string) => Exercise | undefined;
   addExerciseToRoutine: (routineId: string, exerciseId: string) => void;
   removeExerciseFromRoutine: (routineId: string, exerciseId: string) => void;
+  reorderRoutineExercises: (routineId: string, exercises: RoutineExercise[]) => void;
 }
 
 function IconLayers() {
@@ -59,6 +69,7 @@ export function RoutineBuilder({
   getExercise,
   addExerciseToRoutine,
   removeExerciseFromRoutine,
+  reorderRoutineExercises,
 }: Props) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -66,6 +77,12 @@ export function RoutineBuilder({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // Short distance threshold — drag activates immediately on slight movement
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   usePageTitle('Build Routine');
 
@@ -76,6 +93,15 @@ export function RoutineBuilder({
     [filterExercises, filters],
   );
   const addedIds = new Set(routine?.exercises.map(e => e.exerciseId) ?? []);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!routine) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = routine.exercises.findIndex(e => e.exerciseId === active.id);
+    const newIndex = routine.exercises.findIndex(e => e.exerciseId === over.id);
+    reorderRoutineExercises(routine.id, arrayMove(routine.exercises, oldIndex, newIndex));
+  };
 
   if (!routine) {
     return (
@@ -189,23 +215,32 @@ export function RoutineBuilder({
               <p>No exercises yet — tap any exercise below to add it.</p>
             </div>
           ) : (
-            <div className="sequence-items">
-              {routine.exercises.map((re, i) => {
-                const ex = getExercise(re.exerciseId);
-                if (!ex) return null;
-                return (
-                  <div key={re.exerciseId} className="sequence-item">
-                    <span className="sequence-item-num">{i + 1}</span>
-                    <span className="sequence-item-name">{ex.name}</span>
-                    <button
-                      className="sequence-item-remove"
-                      onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
-                      aria-label={`Remove ${ex.name}`}
-                    >×</button>
-                  </div>
-                );
-              })}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={routine.exercises.map(e => e.exerciseId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="seq-panel-items">
+                  {routine.exercises.map((re, i) => {
+                    const ex = getExercise(re.exerciseId);
+                    if (!ex) return null;
+                    return (
+                      <SortablePanelItem
+                        key={re.exerciseId}
+                        id={re.exerciseId}
+                        name={ex.name}
+                        index={i}
+                        onRemove={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 
