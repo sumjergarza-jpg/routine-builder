@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { NavContext } from '../context/NavContext';
 
 function IconPlay() {
@@ -29,19 +29,33 @@ function IconUser() {
 }
 
 export function TopNav() {
-  const { title } = useContext(NavContext);
+  const { title, rightSlot, navInterceptorRef } = useContext(NavContext);
   const location = useLocation();
   const navigate = useNavigate();
 
   const isDashboard = location.pathname === '/';
 
-  const handleBack = () => {
-    // Go back if there's history; otherwise fall back to dashboard
-    if (window.history.length > 2) {
-      navigate(-1);
+  /** Route all TopNav navigation through the interceptor when one is set. */
+  const tryNavigate = (proceed: () => void) => {
+    if (navInterceptorRef.current) {
+      navInterceptorRef.current(proceed);
     } else {
-      navigate('/');
+      proceed();
     }
+  };
+
+  const handleBack = () => {
+    tryNavigate(() => {
+      if (window.history.length > 2) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
+    });
+  };
+
+  const handleBrandClick = () => {
+    tryNavigate(() => navigate('/'));
   };
 
   return (
@@ -57,12 +71,12 @@ export function TopNav() {
             <IconArrowLeft />
           </button>
         )}
-        <Link to="/" className="top-nav-brand">
+        <button className="top-nav-brand" onClick={handleBrandClick} aria-label="Go to Dashboard">
           <div className="top-nav-logo">
             <IconPlay />
           </div>
           <span className="top-nav-brand-name">Align Pilates</span>
-        </Link>
+        </button>
       </div>
 
       {/* Center: page title */}
@@ -70,15 +84,17 @@ export function TopNav() {
         <span className="top-nav-title">{title}</span>
       </div>
 
-      {/* Right: profile placeholder — future account hub */}
+      {/* Right: page-injected slot or profile placeholder */}
       <div className="top-nav-right">
-        <button
-          className="top-nav-profile"
-          aria-label="Account"
-          title="Account settings (coming soon)"
-        >
-          <IconUser />
-        </button>
+        {rightSlot ?? (
+          <button
+            className="top-nav-profile"
+            aria-label="Account"
+            title="Account settings (coming soon)"
+          >
+            <IconUser />
+          </button>
+        )}
       </div>
     </header>
   );

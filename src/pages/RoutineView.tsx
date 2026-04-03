@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { usePageTitle } from '../context/NavContext';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { NavContext, usePageTitle } from '../context/NavContext';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates,
+  verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
 import type { Routine, Exercise, RoutineExercise } from '../data/types';
 import { SortableExercise } from '../components/SortableExercise';
+import { UnsavedModal } from '../components/UnsavedModal';
 
 interface Props {
   routines: Routine[];
@@ -19,15 +26,6 @@ function IconCheck() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-function IconArrowLeft() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="19" y1="12" x2="5" y2="12" />
-      <polyline points="12 19 5 12 12 5" />
     </svg>
   );
 }
@@ -52,6 +50,9 @@ export function RoutineView({
 }: Props) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { setRightSlot, navInterceptorRef } = useContext(NavContext);
+
+  usePageTitle('Routine Review');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -59,20 +60,81 @@ export function RoutineView({
   );
 
   const routine = routines.find(r => r.id === id);
-  usePageTitle(routine?.title ?? 'Review Routine');
 
   const [editTitle, setEditTitle] = useState(routine?.title ?? '');
   const [editDesc, setEditDesc] = useState(routine?.description ?? '');
-  const [saved, setSaved] = useState(false);
+  // isSaved starts false — user should actively save
+  const [isSaved, setIsSaved] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavigate, setPendingNavigate] = useState<(() => void) | null>(null);
 
-  // Sync when routine loads (e.g. first render or navigation)
+  // Sync fields when the routine id changes (e.g. first load)
   useEffect(() => {
     if (routine) {
       setEditTitle(routine.title);
       setEditDesc(routine.description ?? '');
+      setIsSaved(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routine?.id]);
 
+  // ── Save logic ──────────────────────────────────────────────────────────
+  const doSave = useCallback(() => {
+    if (!routine || !editTitle.trim()) return;
+    updateRoutine(routine.id, { title: editTitle.trim() });
+    updateDescription(routine.id, editDesc);
+    setIsSaved(true);
+  }, [routine, editTitle, editDesc, updateRoutine, updateDescription]);
+
+  // ── Navigation guard ────────────────────────────────────────────────────
+  const handleNavRequest = useCallback((proceed: () => void) => {
+    if (isSaved) {
+      proceed();
+    } else {
+      setPendingNavigate(() => proceed);
+      setShowUnsavedModal(true);
+    }
+  }, [isSaved]);
+
+  // Register/update the interceptor whenever handleNavRequest changes
+  useEffect(() => {
+    navInterceptorRef.current = handleNavRequest;
+    return () => { navInterceptorRef.current = null; };
+  }, [handleNavRequest, navInterceptorRef]);
+
+  // Inject "Dashboard" into TopNav right zone; update when isSaved changes
+  useEffect(() => {
+    setRightSlot(
+      <button
+        className="top-nav-dashboard-link"
+        onClick={() => handleNavRequest(() => navigate('/'))}
+      >
+        Dashboard
+      </button>,
+    );
+    return () => setRightSlot(null);
+  }, [handleNavRequest, navigate, setRightSlot]);
+
+  // ── Modal actions ────────────────────────────────────────────────────────
+  const handleSaveAndLeave = () => {
+    doSave();
+    setShowUnsavedModal(false);
+    pendingNavigate?.();
+    setPendingNavigate(null);
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    setShowUnsavedModal(false);
+    pendingNavigate?.();
+    setPendingNavigate(null);
+  };
+
+  const handleCancelModal = () => {
+    setShowUnsavedModal(false);
+    setPendingNavigate(null);
+  };
+
+  // ── Not found ────────────────────────────────────────────────────────────
   if (!routine) {
     return (
       <div className="page">
@@ -82,13 +144,9 @@ export function RoutineView({
     );
   }
 
-  const handleSave = () => {
-    if (!editTitle.trim()) return;
-    updateRoutine(routine.id, { title: editTitle.trim() });
-    updateDescription(routine.id, editDesc);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
+  // ── Field change handlers (each marks dirty) ─────────────────────────────
+  const handleTitleChange = (v: string) => { setEditTitle(v); setIsSaved(false); };
+  const handleDescChange = (v: string) => { setEditDesc(v); setIsSaved(false); };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -97,125 +155,134 @@ export function RoutineView({
     const newIndex = routine.exercises.findIndex(e => e.exerciseId === over.id);
     const reordered = arrayMove(routine.exercises, oldIndex, newIndex);
     reorderRoutineExercises(routine.id, reordered);
+    setIsSaved(false);
   };
 
-  // Derived metadata
+  const handleRemove = (exerciseId: string) => {
+    removeExerciseFromRoutine(routine.id, exerciseId);
+    setIsSaved(false);
+  };
+
+  // ── Derived metadata ─────────────────────────────────────────────────────
   const totalExercises = routine.exercises.length;
   const focusAreas = [...new Set(
-    routine.exercises.flatMap(re => getExercise(re.exerciseId)?.focus ?? [])
+    routine.exercises.flatMap(re => getExercise(re.exerciseId)?.focus ?? []),
   )];
   const levels = [...new Set(
     routine.exercises
       .map(re => getExercise(re.exerciseId)?.difficulty)
-      .filter(Boolean) as string[]
+      .filter(Boolean) as string[],
   )];
 
   return (
-    <div className="review-page">
-      {/* Editable title */}
-      <input
-        className="review-title-input"
-        value={editTitle}
-        onChange={e => setEditTitle(e.target.value)}
-        placeholder="Routine title..."
-      />
+    <>
+      <div className="review-page">
+        {/* Editable title */}
+        <input
+          className="review-title-input"
+          value={editTitle}
+          onChange={e => handleTitleChange(e.target.value)}
+          placeholder="Routine title..."
+        />
 
-      {/* Editable description */}
-      <textarea
-        className="review-desc-input"
-        value={editDesc}
-        onChange={e => setEditDesc(e.target.value)}
-        placeholder="Add a class intention or description..."
-        rows={2}
-      />
+        {/* Editable description */}
+        <textarea
+          className="review-desc-input"
+          value={editDesc}
+          onChange={e => handleDescChange(e.target.value)}
+          placeholder="Add a class intention or description..."
+          rows={2}
+        />
 
-      {/* Metadata row */}
-      <div className="review-meta">
-        <div className="review-meta-stat">
-          <IconLayers />
-          <span>{totalExercises} exercise{totalExercises !== 1 ? 's' : ''}</span>
+        {/* Metadata row */}
+        <div className="review-meta">
+          <div className="review-meta-stat">
+            <IconLayers />
+            <span>{totalExercises} exercise{totalExercises !== 1 ? 's' : ''}</span>
+          </div>
+
+          {levels.length > 0 && (
+            <>
+              <div className="review-meta-divider" />
+              {levels.map(l => (
+                <span key={l} className="review-tag review-tag-level">{l}</span>
+              ))}
+            </>
+          )}
+
+          {focusAreas.length > 0 && (
+            <>
+              <div className="review-meta-divider" />
+              {focusAreas.map(f => (
+                <span key={f} className="review-tag review-tag-focus">{f}</span>
+              ))}
+            </>
+          )}
         </div>
 
-        {levels.length > 0 && (
+        {/* Exercise list */}
+        {routine.exercises.length === 0 ? (
+          <div className="empty-state small">
+            <p>No exercises in this routine yet.</p>
+            <button className="btn btn-primary" onClick={() => navigate(`/build/${routine.id}`)}>
+              Add Exercises
+            </button>
+          </div>
+        ) : (
           <>
-            <div className="review-meta-divider" />
-            {levels.map(l => (
-              <span key={l} className="review-tag review-tag-level">{l}</span>
-            ))}
+            <div className="review-section-label">Exercise Sequence</div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext
+                items={routine.exercises.map(e => e.exerciseId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="sortable-list">
+                  {routine.exercises.map((re, index) => {
+                    const ex = getExercise(re.exerciseId);
+                    if (!ex) return null;
+                    return (
+                      <SortableExercise
+                        key={re.exerciseId}
+                        id={re.exerciseId}
+                        exercise={ex}
+                        index={index}
+                        onRemove={() => handleRemove(re.exerciseId)}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </>
         )}
 
-        {focusAreas.length > 0 && (
-          <>
-            <div className="review-meta-divider" />
-            {focusAreas.map(f => (
-              <span key={f} className="review-tag review-tag-focus">{f}</span>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* Exercise list with drag-to-reorder */}
-      {routine.exercises.length === 0 ? (
-        <div className="empty-state small">
-          <p>No exercises in this routine yet.</p>
-          <button className="btn btn-primary" onClick={() => navigate(`/build/${routine.id}`)}>
-            Add Exercises
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="review-section-label">Exercise Sequence</div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={routine.exercises.map(e => e.exerciseId)}
-              strategy={verticalListSortingStrategy}
+        {/* Single bottom CTA */}
+        <div className="review-actions">
+          {isSaved ? (
+            <button className="btn btn-saved" disabled>
+              <IconCheck />
+              Routine Saved
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={doSave}
+              disabled={!editTitle.trim()}
             >
-              <div className="sortable-list">
-                {routine.exercises.map((re, index) => {
-                  const ex = getExercise(re.exerciseId);
-                  if (!ex) return null;
-                  return (
-                    <SortableExercise
-                      key={re.exerciseId}
-                      id={re.exerciseId}
-                      exercise={ex}
-                      index={index}
-                      onRemove={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
-                    />
-                  );
-                })}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </>
-      )}
-
-      {/* Actions */}
-      <div className="review-actions">
-        <button
-          className="btn btn-primary"
-          onClick={handleSave}
-          disabled={!editTitle.trim()}
-        >
-          Save Routine
-        </button>
-        <button
-          className="review-back-link"
-          onClick={() => navigate(`/build/${routine.id}`)}
-        >
-          <IconArrowLeft />
-          Back to Edit
-        </button>
+              Save Routine
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Toast */}
-      {saved && (
-        <div className="review-toast">
-          <IconCheck />
-          Routine saved
-        </div>
+      {/* Unsaved changes modal */}
+      {showUnsavedModal && (
+        <UnsavedModal
+          onSaveAndLeave={handleSaveAndLeave}
+          onLeaveWithoutSaving={handleLeaveWithoutSaving}
+          onCancel={handleCancelModal}
+        />
       )}
-    </div>
+    </>
   );
 }
