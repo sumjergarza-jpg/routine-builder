@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Routine, Exercise, RoutineExercise } from '../data/types';
 import { type Filters, emptyFilters } from '../store/useStore';
@@ -77,11 +77,19 @@ export function RoutineBuilder({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [panelDragging, setPanelDragging] = useState(false);
 
-  // Press-and-hold: wait 150ms before drag activates; if pointer drifts >8px
-  // during that window (user is scrolling), the drag is cancelled.
+  // Lock body scroll when the panel is open so background content can't scroll.
+  useEffect(() => {
+    document.body.style.overflow = isPanelOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isPanelOpen]);
+
+  // Distance-based activation: drag zone has touch-action:none so the browser
+  // won't start a scroll gesture there — 8px distance is enough to distinguish
+  // intentional drags from taps without needing a delay.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -210,7 +218,7 @@ export function RoutineBuilder({
           <IconChevronDown />
         </div>
 
-        <div className="seq-panel-body">
+        <div className={`seq-panel-body${panelDragging ? ' seq-panel-body-locked' : ''}`}>
           {count === 0 ? (
             <div className="seq-panel-empty">
               <p>No exercises yet — tap any exercise below to add it.</p>
@@ -219,7 +227,9 @@ export function RoutineBuilder({
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+              onDragStart={() => setPanelDragging(true)}
+              onDragEnd={(event) => { setPanelDragging(false); handleDragEnd(event); }}
+              onDragCancel={() => setPanelDragging(false)}
             >
               <SortableContext
                 items={routine.exercises.map(e => e.exerciseId)}

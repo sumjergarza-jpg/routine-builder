@@ -718,7 +718,13 @@ body {
 .seq-panel-body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain; /* stop scroll chaining to background on iOS */
   padding: 8px 0;
+}
+
+/* Freeze scroll during drag so the container doesn't move while items reorder */
+.seq-panel-body-locked {
+  overflow-y: hidden;
 }
 
 .seq-panel-empty {
