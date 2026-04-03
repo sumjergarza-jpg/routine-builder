@@ -1171,15 +1171,19 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: transparent;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition: background 0.12s, border-color 0.12s;
 }
 .exl-item-added .exl-circle {
   background: #1a3d33;
   border-color: #1a3d33;
-  color: white;
+}
+
+.exl-circle-num {
   font-size: 11px;
   font-weight: 700;
+  line-height: 1;
+  color: white;
+  -webkit-text-fill-color: white;
 }
 
 .exl-name {

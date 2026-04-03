@@ -40,7 +40,9 @@ export function ExerciseListItem({ exercise, added, selectionIndex, onToggle, on
       {/* Circle selection control — fixed width, always present */}
       <span className="exl-circle-col" aria-hidden="true">
         <span className="exl-circle">
-          {added && selectionIndex !== undefined ? selectionIndex : null}
+          {added && selectionIndex !== undefined
+            ? <span className="exl-circle-num">{selectionIndex}</span>
+            : null}
         </span>
       </span>
 
