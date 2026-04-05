@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Exercise } from '../data/types';
@@ -37,7 +37,7 @@ function IconTrash() {
 const DELETE_REVEAL_PX = 76;
 const SWIPE_MAX_PX    = 90;
 
-/** Show "×8" for bare numbers, raw value otherwise (e.g. "8–10", "30 sec"). */
+/** "8" → "×8", "30 sec" → "30 sec" (non-numeric shown as-is) */
 function formatReps(reps: string): string {
   return /^\d+$/.test(reps.trim()) ? `×${reps.trim()}` : reps.trim();
 }
@@ -62,31 +62,47 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
   const [editingReps, setEditingReps] = useState(false);
   const [localReps, setLocalReps]     = useState(reps ?? '');
   const repsInputRef                  = useRef<HTMLInputElement>(null);
+  // Tracks Escape key so onBlur knows not to commit
+  const escapingRef                   = useRef(false);
 
-  // Keep local value in sync if prop changes externally (e.g. reorder)
+  // Sync from prop ONLY when the reps prop itself changes (not on editingReps toggle).
+  // This prevents prematurely clearing localReps before the store has propagated
+  // the new value — which would cause a flash from "×8" → "Add reps" → "×8".
   useEffect(() => {
     if (!editingReps) setLocalReps(reps ?? '');
-  }, [reps, editingReps]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reps]);
 
-  const startEditReps = (e: React.MouseEvent | React.TouchEvent) => {
-    e.stopPropagation(); // don't trigger swipe dismiss
+  // Select all text immediately after entering edit mode (runs before paint).
+  useLayoutEffect(() => {
+    if (editingReps) repsInputRef.current?.select();
+  }, [editingReps]);
+
+  // Activate edit mode via natural browser focus — no programmatic .focus() call needed.
+  // iOS keyboard opens because the user's own tap triggers focus synchronously.
+  const handleRepsFocus = () => {
     setLocalReps(reps ?? '');
     setEditingReps(true);
-    // focus after render
-    requestAnimationFrame(() => repsInputRef.current?.select());
   };
 
-  const commitReps = () => {
-    setEditingReps(false);
+  const handleRepsBlur = () => {
+    if (escapingRef.current) {
+      // Escape: discard changes and restore committed value
+      escapingRef.current = false;
+      setLocalReps(reps ?? '');
+      setEditingReps(false);
+      return;
+    }
     const trimmed = localReps.trim();
+    setEditingReps(false);
     if (trimmed !== (reps ?? '')) {
       onRepsChange(trimmed);
     }
   };
 
-  const handleRepsKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { e.preventDefault(); commitReps(); }
-    if (e.key === 'Escape') { setEditingReps(false); setLocalReps(reps ?? ''); }
+  const handleRepsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter')  { e.preventDefault(); repsInputRef.current?.blur(); }
+    if (e.key === 'Escape') { escapingRef.current = true; repsInputRef.current?.blur(); }
   };
 
   // ── Haptics + drag cleanup ────────────────────────────────────────────────
@@ -102,7 +118,7 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
     }
   }, [isDragging]);
 
-  // ── dnd-kit styles ───────────────────────────────────────────────────────
+  // ── dnd-kit styles ────────────────────────────────────────────────────────
   const wrapperStyle = { transform: CSS.Transform.toString(transform), transition };
 
   const innerStyle = {
@@ -112,10 +128,10 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
 
   // ── Swipe handlers ────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (editingReps) return; // don't swipe while editing reps
-    touchStartX.current  = e.touches[0].clientX;
-    touchStartY.current  = e.touches[0].clientY;
-    directionRef.current = null;
+    if (editingReps) return;
+    touchStartX.current    = e.touches[0].clientX;
+    touchStartY.current    = e.touches[0].clientY;
+    directionRef.current   = null;
     touchActiveRef.current = true;
   };
 
@@ -128,8 +144,7 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
     }
     if (directionRef.current !== 'horiz') return;
 
-    const base    = revealed ? -DELETE_REVEAL_PX : 0;
-    const clamped = Math.max(-SWIPE_MAX_PX, Math.min(0, base + dx));
+    const clamped = Math.max(-SWIPE_MAX_PX, Math.min(0, (revealed ? -DELETE_REVEAL_PX : 0) + dx));
     setSwipeX(clamped);
   };
 
@@ -146,15 +161,8 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
     }
   };
 
-  const handleDelete = () => {
-    setSwipeX(0);
-    setRevealed(false);
-    onRemove();
-  };
-
-  const dismissSwipe = () => {
-    if (revealed) { setSwipeX(0); setRevealed(false); }
-  };
+  const handleDelete = () => { setSwipeX(0); setRevealed(false); onRemove(); };
+  const dismissSwipe = () => { if (revealed) { setSwipeX(0); setRevealed(false); } };
 
   return (
     <div
@@ -190,29 +198,27 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
           </div>
         </div>
 
-        {/* Reps field */}
-        {editingReps ? (
-          <input
-            ref={repsInputRef}
-            className="reps-input"
-            type="text"
-            inputMode="numeric"
-            value={localReps}
-            placeholder="e.g. 8"
-            onChange={e => setLocalReps(e.target.value)}
-            onBlur={commitReps}
-            onKeyDown={handleRepsKeyDown}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : (
-          <button
-            className={`reps-chip${localReps ? ' reps-chip--set' : ''}`}
-            onClick={startEditReps}
-            aria-label={localReps ? `Reps: ${localReps}. Tap to edit` : 'Add reps'}
-          >
-            {localReps ? formatReps(localReps) : 'Add reps'}
-          </button>
-        )}
+        {/*
+          Single always-mounted <input> that acts as both chip and text field.
+          – Display mode: styled as a pill chip, shows formatted value or placeholder
+          – Edit mode: underline style, shows raw value for editing
+          Using a single element means the user's tap naturally focuses it,
+          which opens the iOS keyboard synchronously (no programmatic .focus() needed).
+        */}
+        <input
+          ref={repsInputRef}
+          type="text"
+          inputMode="numeric"
+          className={`reps-input${editingReps ? ' reps-input--editing' : (localReps ? ' reps-input--set' : '')}`}
+          value={editingReps ? localReps : (localReps ? formatReps(localReps) : '')}
+          placeholder={editingReps ? 'e.g. 8' : 'reps'}
+          onFocus={handleRepsFocus}
+          onChange={e => { if (editingReps) setLocalReps(e.target.value); }}
+          onBlur={handleRepsBlur}
+          onKeyDown={handleRepsKeyDown}
+          onClick={e => e.stopPropagation()}
+          aria-label={localReps ? `Reps: ${localReps}. Tap to edit` : 'Add reps'}
+        />
 
         {/* Right: drag handle */}
         <div
