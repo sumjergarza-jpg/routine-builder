@@ -1714,7 +1714,7 @@ body {
   border-bottom: 2px solid var(--color-primary);
   border-radius: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: 16px; /* ≥16px prevents iOS auto-zoom */
   font-weight: 600;
   color: var(--color-text);
   text-align: center;

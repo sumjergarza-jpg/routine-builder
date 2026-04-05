@@ -196,7 +196,7 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
             ref={repsInputRef}
             className="reps-input"
             type="text"
-            inputMode="text"
+            inputMode="numeric"
             value={localReps}
             placeholder="e.g. 8"
             onChange={e => setLocalReps(e.target.value)}
@@ -206,11 +206,11 @@ export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsCh
           />
         ) : (
           <button
-            className={`reps-chip${reps ? ' reps-chip--set' : ''}`}
+            className={`reps-chip${localReps ? ' reps-chip--set' : ''}`}
             onClick={startEditReps}
-            aria-label={reps ? `Reps: ${reps}. Tap to edit` : 'Add reps'}
+            aria-label={localReps ? `Reps: ${localReps}. Tap to edit` : 'Add reps'}
           >
-            {reps ? formatReps(reps) : 'Add reps'}
+            {localReps ? formatReps(localReps) : 'Add reps'}
           </button>
         )}
 
