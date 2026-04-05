@@ -18,6 +18,7 @@ export interface Exercise {
 export interface RoutineExercise {
   exerciseId: string;
   order: number;
+  reps?: string;
 }
 
 export interface Routine {

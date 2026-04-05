@@ -8,7 +8,9 @@ interface Props {
   id: string;
   exercise: Exercise;
   index: number;
+  reps?: string;
   onRemove: () => void;
+  onRepsChange: (reps: string) => void;
 }
 
 function IconGrip() {
@@ -32,51 +34,85 @@ function IconTrash() {
   );
 }
 
-const DELETE_REVEAL_PX = 76; // px at which delete is fully revealed
-const SWIPE_MAX_PX    = 90; // maximum overscroll
+const DELETE_REVEAL_PX = 76;
+const SWIPE_MAX_PX    = 90;
 
-export function SortableExercise({ id, exercise, index, onRemove }: Props) {
+/** Show "×8" for bare numbers, raw value otherwise (e.g. "8–10", "30 sec"). */
+function formatReps(reps: string): string {
+  return /^\d+$/.test(reps.trim()) ? `×${reps.trim()}` : reps.trim();
+}
+
+export function SortableExercise({ id, exercise, index, reps, onRemove, onRepsChange }: Props) {
   const {
     attributes, listeners,
     setNodeRef, setActivatorNodeRef,
     transform, transition, isDragging,
   } = useSortable({ id });
 
-  // Swipe-to-delete state
+  // ── Swipe-to-delete ───────────────────────────────────────────────────────
   const [swipeX, setSwipeX]     = useState(0);
   const [revealed, setRevealed] = useState(false);
 
   const touchStartX    = useRef(0);
   const touchStartY    = useRef(0);
-  const touchActiveRef = useRef(false); // suppress transition during active touch
+  const touchActiveRef = useRef(false);
   const directionRef   = useRef<'horiz' | 'vert' | null>(null);
 
-  // Haptic feedback when drag activates
+  // ── Inline reps editing ───────────────────────────────────────────────────
+  const [editingReps, setEditingReps] = useState(false);
+  const [localReps, setLocalReps]     = useState(reps ?? '');
+  const repsInputRef                  = useRef<HTMLInputElement>(null);
+
+  // Keep local value in sync if prop changes externally (e.g. reorder)
+  useEffect(() => {
+    if (!editingReps) setLocalReps(reps ?? '');
+  }, [reps, editingReps]);
+
+  const startEditReps = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation(); // don't trigger swipe dismiss
+    setLocalReps(reps ?? '');
+    setEditingReps(true);
+    // focus after render
+    requestAnimationFrame(() => repsInputRef.current?.select());
+  };
+
+  const commitReps = () => {
+    setEditingReps(false);
+    const trimmed = localReps.trim();
+    if (trimmed !== (reps ?? '')) {
+      onRepsChange(trimmed);
+    }
+  };
+
+  const handleRepsKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitReps(); }
+    if (e.key === 'Escape') { setEditingReps(false); setLocalReps(reps ?? ''); }
+  };
+
+  // ── Haptics + drag cleanup ────────────────────────────────────────────────
   useEffect(() => {
     if (isDragging && navigator.vibrate) navigator.vibrate(15);
   }, [isDragging]);
 
-  // Reset swipe when drag starts (prevents stale translate)
   useEffect(() => {
     if (isDragging) {
       setSwipeX(0);
       setRevealed(false);
+      setEditingReps(false);
     }
   }, [isDragging]);
 
-  // Outer wrapper gets dnd-kit's transform (moves the whole row while sorting)
-  const wrapperStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  // ── dnd-kit styles ───────────────────────────────────────────────────────
+  const wrapperStyle = { transform: CSS.Transform.toString(transform), transition };
 
-  // Inner row slides horizontally for swipe-to-delete
   const innerStyle = {
     transform: `translateX(${swipeX}px)`,
     transition: touchActiveRef.current ? 'none' : 'transform 0.22s ease',
   };
 
+  // ── Swipe handlers ────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (editingReps) return; // don't swipe while editing reps
     touchStartX.current  = e.touches[0].clientX;
     touchStartY.current  = e.touches[0].clientY;
     directionRef.current = null;
@@ -87,16 +123,13 @@ export function SortableExercise({ id, exercise, index, onRemove }: Props) {
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
 
-    // Determine direction on first meaningful movement
     if (!directionRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
       directionRef.current = Math.abs(dx) > Math.abs(dy) ? 'horiz' : 'vert';
     }
     if (directionRef.current !== 'horiz') return;
 
-    // Offset from the already-revealed position
-    const base   = revealed ? -DELETE_REVEAL_PX : 0;
-    const raw    = base + dx;
-    const clamped = Math.max(-SWIPE_MAX_PX, Math.min(0, raw));
+    const base    = revealed ? -DELETE_REVEAL_PX : 0;
+    const clamped = Math.max(-SWIPE_MAX_PX, Math.min(0, base + dx));
     setSwipeX(clamped);
   };
 
@@ -120,10 +153,7 @@ export function SortableExercise({ id, exercise, index, onRemove }: Props) {
   };
 
   const dismissSwipe = () => {
-    if (revealed) {
-      setSwipeX(0);
-      setRevealed(false);
-    }
+    if (revealed) { setSwipeX(0); setRevealed(false); }
   };
 
   return (
@@ -140,7 +170,7 @@ export function SortableExercise({ id, exercise, index, onRemove }: Props) {
         </button>
       </div>
 
-      {/* Main row — slides left to expose delete zone */}
+      {/* Main row */}
       <div
         className="sortable-exercise"
         style={innerStyle}
@@ -159,6 +189,30 @@ export function SortableExercise({ id, exercise, index, onRemove }: Props) {
             {equipmentLabels[exercise.equipment]} · {difficultyLabels[exercise.difficulty]}
           </div>
         </div>
+
+        {/* Reps field */}
+        {editingReps ? (
+          <input
+            ref={repsInputRef}
+            className="reps-input"
+            type="text"
+            inputMode="text"
+            value={localReps}
+            placeholder="e.g. 8"
+            onChange={e => setLocalReps(e.target.value)}
+            onBlur={commitReps}
+            onKeyDown={handleRepsKeyDown}
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <button
+            className={`reps-chip${reps ? ' reps-chip--set' : ''}`}
+            onClick={startEditReps}
+            aria-label={reps ? `Reps: ${reps}. Tap to edit` : 'Add reps'}
+          >
+            {reps ? formatReps(reps) : 'Add reps'}
+          </button>
+        )}
 
         {/* Right: drag handle */}
         <div

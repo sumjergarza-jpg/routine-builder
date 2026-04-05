@@ -1672,6 +1672,56 @@ body {
 .sortable-name { font-size: 14px; font-weight: 600; }
 .sortable-meta { font-size: 12px; color: var(--color-text-secondary); }
 
+/* Reps chip (display mode) */
+.reps-chip {
+  flex-shrink: 0;
+  min-width: 56px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1.5px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.reps-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-style: solid;
+}
+.reps-chip--set {
+  border-style: solid;
+  border-color: transparent;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.reps-chip--set:hover {
+  border-color: var(--color-primary);
+}
+
+/* Reps inline input (edit mode) */
+.reps-input {
+  flex-shrink: 0;
+  width: 64px;
+  padding: 3px 6px;
+  border: none;
+  border-bottom: 2px solid var(--color-primary);
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+}
+
 /* Lifted/dragging state */
 .sortable-exercise-wrapper.is-dragging .sortable-exercise {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.13);

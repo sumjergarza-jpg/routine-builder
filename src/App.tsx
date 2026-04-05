@@ -66,6 +66,7 @@ function App() {
                     reorderRoutineExercises={store.reorderRoutineExercises}
                     updateRoutine={store.updateRoutine}
                     updateDescription={store.updateDescription}
+                    updateExerciseReps={store.updateExerciseReps}
                   />
                 }
               />

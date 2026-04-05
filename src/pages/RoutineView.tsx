@@ -20,6 +20,7 @@ interface Props {
   reorderRoutineExercises: (routineId: string, exercises: RoutineExercise[]) => void;
   updateRoutine: (id: string, updates: Partial<Pick<Routine, 'title'>>) => void;
   updateDescription: (routineId: string, description: string) => void;
+  updateExerciseReps: (routineId: string, exerciseId: string, reps: string) => void;
 }
 
 function IconCheck() {
@@ -47,6 +48,7 @@ export function RoutineView({
   reorderRoutineExercises,
   updateRoutine,
   updateDescription,
+  updateExerciseReps,
 }: Props) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -246,7 +248,12 @@ export function RoutineView({
                         id={re.exerciseId}
                         exercise={ex}
                         index={index}
+                        reps={re.reps}
                         onRemove={() => handleRemove(re.exerciseId)}
+                        onRepsChange={(reps) => {
+                          updateExerciseReps(routine.id, re.exerciseId, reps);
+                          setIsSaved(false);
+                        }}
                       />
                     );
                   })}

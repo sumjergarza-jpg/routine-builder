@@ -144,6 +144,17 @@ export function useStore() {
     putRoutine(routineId, updated);
   }, []);
 
+  const updateExerciseReps = useCallback((routineId: string, exerciseId: string, reps: string) => {
+    const routine = routinesRef.current.find(r => r.id === routineId);
+    if (!routine) return;
+    const exercises = routine.exercises.map(e =>
+      e.exerciseId === exerciseId ? { ...e, reps: reps || undefined } : e
+    );
+    const updated = { ...routine, exercises };
+    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
+    putRoutine(routineId, updated);
+  }, []);
+
   const updateDescription = useCallback((routineId: string, description: string) => {
     const descs = loadDescriptions();
     descs[routineId] = description;
@@ -192,6 +203,7 @@ export function useStore() {
     addExerciseToRoutine,
     removeExerciseFromRoutine,
     reorderRoutineExercises,
+    updateExerciseReps,
     createFolder,
     deleteFolder,
     renameFolder,
