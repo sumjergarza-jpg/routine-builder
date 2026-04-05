@@ -256,8 +256,15 @@ export function RoutineView({
           </>
         )}
 
-        {/* Single bottom CTA */}
+        {/* Bottom actions: Edit Exercises (left) · Save Routine (right) */}
         <div className="review-actions">
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate(`/build/${routine.id}`)}
+          >
+            Edit Exercises
+          </button>
+
           {isSaved ? (
             <button className="btn btn-saved" disabled>
               <IconCheck />
