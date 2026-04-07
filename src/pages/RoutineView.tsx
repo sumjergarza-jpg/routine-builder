@@ -23,14 +23,6 @@ interface Props {
   updateExerciseReps: (routineId: string, exerciseId: string, reps: string) => void;
 }
 
-function IconCheck() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
 function IconLayers() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -263,7 +255,7 @@ export function RoutineView({
           </>
         )}
 
-        {/* Bottom actions: Edit Exercises (left) · Save Routine (right) */}
+        {/* Bottom actions: Edit Exercises (left) · Save & View (right) */}
         <div className="review-actions">
           <button
             className="btn btn-outline"
@@ -272,20 +264,13 @@ export function RoutineView({
             Edit Exercises
           </button>
 
-          {isSaved ? (
-            <button className="btn btn-saved" disabled>
-              <IconCheck />
-              Routine Saved
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary"
-              onClick={doSave}
-              disabled={!editTitle.trim()}
-            >
-              Save Routine
-            </button>
-          )}
+          <button
+            className="btn btn-primary"
+            onClick={() => { doSave(); navigate(`/view/${routine.id}`); }}
+            disabled={!editTitle.trim()}
+          >
+            Save &amp; View
+          </button>
         </div>
       </div>
 

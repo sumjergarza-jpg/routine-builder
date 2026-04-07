@@ -2157,3 +2157,102 @@ body {
   .top-nav-brand-name { display: none; }
   .top-nav-title { font-size: 13px; }
 }
+
+/* ===== Routine View Page (clean teaching view) ===== */
+.routine-view-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.routine-view-header {
+  margin-bottom: 8px;
+}
+
+.routine-view-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+
+.routine-view-count {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  margin-bottom: 0;
+}
+
+.routine-view-description {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-top: 16px;
+  margin-bottom: 0;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.routine-view-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.routine-view-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 8px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 -8px;
+  transition: background 0.12s;
+}
+
+.routine-view-item:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+.routine-view-item:hover,
+.routine-view-item:focus-visible {
+  background: rgba(90, 155, 140, 0.06);
+  outline: none;
+}
+
+.routine-view-item:active {
+  background: rgba(90, 155, 140, 0.1);
+}
+
+.routine-view-num {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  min-width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.routine-view-name {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.routine-view-reps {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  white-space: nowrap;
+  opacity: 0.75;
+}

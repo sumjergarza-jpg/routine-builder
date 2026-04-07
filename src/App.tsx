@@ -5,6 +5,7 @@ import { TopNav } from './components/TopNav';
 import { Dashboard } from './pages/Dashboard';
 import { RoutineBuilder } from './pages/RoutineBuilder';
 import { RoutineView } from './pages/RoutineView';
+import { RoutineViewFinal } from './pages/RoutineViewFinal';
 import { FolderView } from './pages/FolderView';
 
 function App() {
@@ -67,6 +68,15 @@ function App() {
                     updateRoutine={store.updateRoutine}
                     updateDescription={store.updateDescription}
                     updateExerciseReps={store.updateExerciseReps}
+                  />
+                }
+              />
+              <Route
+                path="/view/:id"
+                element={
+                  <RoutineViewFinal
+                    routines={store.routines}
+                    getExercise={store.getExercise}
                   />
                 }
               />
