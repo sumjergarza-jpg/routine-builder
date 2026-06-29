@@ -2,15 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Exercise, Routine, RoutineExercise, Folder, Equipment, Position, Difficulty, MuscleGroup, Contraindication } from '../data/types';
 import { exercises as seedExercises } from '../data/exercises';
 
-function loadFolders(): Folder[] {
-  try { return JSON.parse(localStorage.getItem('align-folders') || '[]'); }
-  catch { return []; }
-}
-
-function loadDescriptions(): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem('align-descriptions') || '{}'); }
-  catch { return {}; }
-}
 
 export interface Filters {
   equipment: Equipment | '';
@@ -34,7 +25,7 @@ function putRoutine(id: string, routine: Routine) {
   fetch(`/api/routines/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: routine.title, exercises: routine.exercises }),
+    body: JSON.stringify({ title: routine.title, description: routine.description || '', exercises: routine.exercises }),
   }).catch(console.error);
 }
 
@@ -42,24 +33,22 @@ export function useStore() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const routinesRef = useRef<Routine[]>([]);
-  const [folders, setFolders] = useState<Folder[]>(() => loadFolders());
-
-  useEffect(() => {
-    localStorage.setItem('align-folders', JSON.stringify(folders));
-  }, [folders]);
+  const [folders, setFolders] = useState<Folder[]>([]);
 
   useEffect(() => { routinesRef.current = routines; }, [routines]);
 
   useEffect(() => {
-    fetch('/api/routines')
-      .then(r => r.json())
-      .then((data: Routine[]) => {
-        const descs = loadDescriptions();
-        setRoutines(data.map(r => ({ ...r, description: descs[r.id] })));
+    Promise.all([
+      fetch('/api/routines').then(r => r.json()),
+      fetch('/api/folders').then(r => r.json()),
+    ])
+      .then(([routineData, folderData]) => {
+        setRoutines(routineData);
+        setFolders(folderData);
         setLoading(false);
       })
       .catch(err => {
-        console.error('Failed to load routines:', err);
+        console.error('Failed to load data:', err);
         setLoading(false);
       });
   }, []);
@@ -156,30 +145,44 @@ export function useStore() {
   }, []);
 
   const updateDescription = useCallback((routineId: string, description: string) => {
-    const descs = loadDescriptions();
-    descs[routineId] = description;
-    localStorage.setItem('align-descriptions', JSON.stringify(descs));
-    setRoutines(rs => rs.map(r => r.id === routineId ? { ...r, description } : r));
+    const routine = routinesRef.current.find(r => r.id === routineId);
+    if (!routine) return;
+    const updated = { ...routine, description };
+    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
+    putRoutine(routineId, updated);
   }, []);
 
   const createFolder = useCallback((name: string): Folder => {
     const folder: Folder = { id: `folder-${Date.now()}`, name, routineIds: [] };
     setFolders(fs => [...fs, folder]);
+    fetch('/api/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: folder.id, name }),
+    }).catch(console.error);
     return folder;
   }, []);
 
   const deleteFolder = useCallback((id: string) => {
     setFolders(fs => fs.filter(f => f.id !== id));
+    fetch(`/api/folders/${id}`, { method: 'DELETE' }).catch(console.error);
   }, []);
 
   const renameFolder = useCallback((id: string, name: string) => {
     setFolders(fs => fs.map(f => f.id === id ? { ...f, name } : f));
+    fetch(`/api/folders/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).catch(console.error);
   }, []);
 
   const toggleRoutineInFolder = useCallback((routineId: string, folderId: string) => {
+    let action = 'add';
     setFolders(fs => fs.map(f => {
       if (f.id !== folderId) return f;
       const isIn = f.routineIds.includes(routineId);
+      if (isIn) action = 'remove';
       return {
         ...f,
         routineIds: isIn
@@ -187,6 +190,11 @@ export function useStore() {
           : [...f.routineIds, routineId],
       };
     }));
+    fetch(`/api/folders/${folderId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ routineId, action }),
+    }).catch(console.error);
   }, []);
 
   return {

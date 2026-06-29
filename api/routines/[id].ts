@@ -5,10 +5,10 @@ export default async function handler(req: any, res: any) {
 
   try {
     if (req.method === 'PUT') {
-      const { title, exercises } = req.body;
+      const { title, description, exercises } = req.body;
       await sql`
         UPDATE routines
-        SET title = ${title}, exercises = ${JSON.stringify(exercises)}::jsonb
+        SET title = ${title}, description = ${description || ''}, exercises = ${JSON.stringify(exercises)}::jsonb
         WHERE id = ${id}
       `;
       return res.status(200).json({ ok: true });

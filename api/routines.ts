@@ -6,7 +6,7 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'GET') {
       const rows = await sql`
-        SELECT id, title, created_date AS "createdDate", exercises
+        SELECT id, title, description, created_date AS "createdDate", exercises
         FROM routines
         ORDER BY created_date DESC
       `;
@@ -14,12 +14,12 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method === 'POST') {
-      const { id, title, createdDate, exercises } = req.body;
+      const { id, title, description, createdDate, exercises } = req.body;
       await sql`
-        INSERT INTO routines (id, title, created_date, exercises)
-        VALUES (${id}, ${title}, ${createdDate}, ${JSON.stringify(exercises)}::jsonb)
+        INSERT INTO routines (id, title, description, created_date, exercises)
+        VALUES (${id}, ${title}, ${description || ''}, ${createdDate}, ${JSON.stringify(exercises)}::jsonb)
       `;
-      return res.status(201).json({ id, title, createdDate, exercises });
+      return res.status(201).json({ id, title, description, createdDate, exercises });
     }
 
     res.status(405).json({ error: 'Method not allowed' });
