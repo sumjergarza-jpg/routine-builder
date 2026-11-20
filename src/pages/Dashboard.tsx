@@ -156,7 +156,7 @@ export function Dashboard({
 
         {/* ── Hero ── */}
         <div className="dashboard-hero">
-          <h1 className="dashboard-hero-title">Design the perfect flow.</h1>
+          <h1 className="dashboard-hero-title">Your next class starts here.</h1>
           <p className="dashboard-hero-subtitle">
             Explore exercises, build sequences, and save your favorite class plans.
           </p>
