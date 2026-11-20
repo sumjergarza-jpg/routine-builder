@@ -253,7 +253,7 @@ export function Dashboard({
                             key={r.id}
                             routine={r}
                             folders={folders}
-                            onNavigate={() => navigate(`/routine/${r.id}`)}
+                            onNavigate={() => navigate(`/view/${r.id}`)}
                             onDeleteClick={() => setPendingDelete({ type: 'routine', id: r.id, name: r.title })}
                             onToggleFolder={onToggleRoutineInFolder}
                           />
@@ -295,7 +295,7 @@ export function Dashboard({
                 key={r.id}
                 routine={r}
                 folders={folders}
-                onNavigate={() => navigate(`/routine/${r.id}`)}
+                onNavigate={() => navigate(`/view/${r.id}`)}
                 onDeleteClick={() => setPendingDelete({ type: 'routine', id: r.id, name: r.title })}
                 onToggleFolder={onToggleRoutineInFolder}
               />

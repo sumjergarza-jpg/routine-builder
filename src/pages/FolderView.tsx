@@ -74,7 +74,7 @@ export function FolderView({ routines, folders, onDeleteRoutine, onToggleRoutine
                 key={r.id}
                 routine={r}
                 folders={folders}
-                onNavigate={() => navigate(`/routine/${r.id}`)}
+                onNavigate={() => navigate(`/view/${r.id}`)}
                 onDeleteClick={() => setPendingDelete({ id: r.id, name: r.title })}
                 onToggleFolder={onToggleRoutineInFolder}
               />

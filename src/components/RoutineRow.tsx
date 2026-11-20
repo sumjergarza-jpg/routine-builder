@@ -119,7 +119,8 @@ function FolderPopover({ anchorRef, folders, routineId, onToggleFolder, onClose 
   }, [anchorRef, onClose]);
 
   return createPortal(
-    <div className="dash-popover" ref={popoverRef} style={style}>
+    // stopPropagation: React bubbles portal events to the routine row, which would navigate away
+    <div className="dash-popover" ref={popoverRef} style={style} onClick={e => e.stopPropagation()}>
       <div className="dash-popover-title">Add to folder</div>
       {folders.length === 0 ? (
         <div className="dash-popover-empty">No folders yet — create one first.</div>
