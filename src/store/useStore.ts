@@ -46,6 +46,19 @@ export function useStore() {
   const exercisesRef = useRef<Exercise[]>([]);
 
   useEffect(() => { routinesRef.current = routines; }, [routines]);
+
+  // Update the ref synchronously so back-to-back mutations (e.g. save title, then
+  // description) each build on the latest routine instead of a stale copy.
+  const setRoutinesNow = useCallback((next: Routine[]) => {
+    routinesRef.current = next;
+    setRoutines(next);
+  }, []);
+
+  /** Replace one routine locally and persist it. */
+  const commitRoutine = useCallback((updated: Routine) => {
+    setRoutinesNow(routinesRef.current.map(r => r.id === updated.id ? updated : r));
+    putRoutine(updated.id, updated);
+  }, [setRoutinesNow]);
   useEffect(() => { exercisesRef.current = exercises; }, [exercises]);
 
   useEffect(() => {
@@ -95,36 +108,34 @@ export function useStore() {
       createdDate: new Date().toISOString(),
       exercises: [],
     };
-    setRoutines(rs => [routine, ...rs]);
+    setRoutinesNow([routine, ...routinesRef.current]);
     apiWrite('/api/routines', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routine),
     });
     return routine;
-  }, []);
+  }, [setRoutinesNow]);
 
   const updateRoutine = useCallback((id: string, updates: Partial<Pick<Routine, 'title' | 'exercises'>>) => {
     const current = routinesRef.current.find(r => r.id === id);
     if (!current) return;
     const updated = { ...current, ...updates };
-    setRoutines(rs => rs.map(r => r.id === id ? updated : r));
-    putRoutine(id, updated);
-  }, []);
+    commitRoutine(updated);
+  }, [commitRoutine]);
 
   const deleteRoutine = useCallback((id: string) => {
-    setRoutines(rs => rs.filter(r => r.id !== id));
+    setRoutinesNow(routinesRef.current.filter(r => r.id !== id));
     apiWrite(`/api/routines/${id}`, { method: 'DELETE' });
-  }, []);
+  }, [setRoutinesNow]);
 
   const addExerciseToRoutine = useCallback((routineId: string, exerciseId: string) => {
     const routine = routinesRef.current.find(r => r.id === routineId);
     if (!routine || routine.exercises.some(e => e.exerciseId === exerciseId)) return;
     const exercises = [...routine.exercises, { exerciseId, order: routine.exercises.length }];
     const updated = { ...routine, exercises };
-    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
-    putRoutine(routineId, updated);
-  }, []);
+    commitRoutine(updated);
+  }, [commitRoutine]);
 
   const removeExerciseFromRoutine = useCallback((routineId: string, exerciseId: string) => {
     const routine = routinesRef.current.find(r => r.id === routineId);
@@ -133,18 +144,16 @@ export function useStore() {
       .filter(e => e.exerciseId !== exerciseId)
       .map((e, i) => ({ ...e, order: i }));
     const updated = { ...routine, exercises };
-    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
-    putRoutine(routineId, updated);
-  }, []);
+    commitRoutine(updated);
+  }, [commitRoutine]);
 
   const reorderRoutineExercises = useCallback((routineId: string, exercises: RoutineExercise[]) => {
     const routine = routinesRef.current.find(r => r.id === routineId);
     if (!routine) return;
     const reordered = exercises.map((e, i) => ({ ...e, order: i }));
     const updated = { ...routine, exercises: reordered };
-    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
-    putRoutine(routineId, updated);
-  }, []);
+    commitRoutine(updated);
+  }, [commitRoutine]);
 
   const updateExerciseReps = useCallback((routineId: string, exerciseId: string, reps: string) => {
     const routine = routinesRef.current.find(r => r.id === routineId);
@@ -153,17 +162,15 @@ export function useStore() {
       e.exerciseId === exerciseId ? { ...e, reps: reps || undefined } : e
     );
     const updated = { ...routine, exercises };
-    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
-    putRoutine(routineId, updated);
-  }, []);
+    commitRoutine(updated);
+  }, [commitRoutine]);
 
   const updateDescription = useCallback((routineId: string, description: string) => {
     const routine = routinesRef.current.find(r => r.id === routineId);
     if (!routine) return;
     const updated = { ...routine, description };
-    setRoutines(rs => rs.map(r => r.id === routineId ? updated : r));
-    putRoutine(routineId, updated);
-  }, []);
+    commitRoutine(updated);
+  }, [commitRoutine]);
 
   const createFolder = useCallback((name: string): Folder => {
     const folder: Folder = { id: `folder-${Date.now()}`, name, routineIds: [] };
