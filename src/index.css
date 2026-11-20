@@ -156,6 +156,19 @@ body {
   max-width: 280px;
 }
 
+.top-nav-title-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.top-nav-title-link:hover {
+  color: var(--color-primary, #5a9b8c);
+}
+
 /* Dashboard nav link (injected by review page) */
 .top-nav-dashboard-link {
   background: none;

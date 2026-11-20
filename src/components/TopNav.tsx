@@ -81,7 +81,13 @@ export function TopNav() {
 
       {/* Center: page title */}
       <div className="top-nav-center">
-        <span className="top-nav-title">{title}</span>
+        {isDashboard ? (
+          <button className="top-nav-title top-nav-title-link" onClick={handleBrandClick}>
+            {title}
+          </button>
+        ) : (
+          <span className="top-nav-title">{title}</span>
+        )}
       </div>
 
       {/* Right: page-injected slot or profile placeholder */}

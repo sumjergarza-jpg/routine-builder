@@ -99,7 +99,7 @@ export function Dashboard({
   onToggleRoutineInFolder,
 }: Props) {
   const navigate = useNavigate();
-  usePageTitle('Dashboard');
+  usePageTitle('Routine Builder');
 
   // Create modals
   const [showCreateFolder, setShowCreateFolder] = useState(false);
