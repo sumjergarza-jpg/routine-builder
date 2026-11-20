@@ -177,7 +177,7 @@ export function Dashboard({
         <div className="dashboard-hero">
           <h1 className="dashboard-hero-title">Design the perfect flow.</h1>
           <p className="dashboard-hero-subtitle">
-            Create, manage, and organize your Pilates class routines with our intelligent sequence builder.
+            Explore exercises, build sequences, and save your favorite class plans.
           </p>
           <div className="dashboard-hero-actions">
             <button className="hero-btn-primary" onClick={handleCreateRoutine}>
