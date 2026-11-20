@@ -28,4 +28,16 @@ export async function initDb() {
       PRIMARY KEY (folder_id, routine_id)
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS exercises (
+      id                TEXT PRIMARY KEY,
+      name              TEXT NOT NULL,
+      equipment         TEXT NOT NULL,
+      position          TEXT NOT NULL,
+      difficulty        TEXT NOT NULL,
+      focus             JSONB NOT NULL DEFAULT '[]',
+      contraindications JSONB NOT NULL DEFAULT '[]',
+      description       TEXT NOT NULL DEFAULT ''
+    )
+  `;
 }

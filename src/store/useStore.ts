@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Exercise, Routine, RoutineExercise, Folder, Equipment, Position, Difficulty, MuscleGroup, Contraindication } from '../data/types';
-import { exercises as seedExercises } from '../data/exercises';
 
 
 export interface Filters {
@@ -21,12 +20,21 @@ export const emptyFilters: Filters = {
   search: '',
 };
 
+// fetch wrapper for writes: surfaces non-2xx responses (fetch only rejects on network errors)
+function apiWrite(url: string, init: RequestInit) {
+  return fetch(url, init)
+    .then(res => {
+      if (!res.ok) throw new Error(`${init.method} ${url} failed: ${res.status}`);
+    })
+    .catch(console.error);
+}
+
 function putRoutine(id: string, routine: Routine) {
-  fetch(`/api/routines/${id}`, {
+  apiWrite(`/api/routines/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title: routine.title, description: routine.description || '', exercises: routine.exercises }),
-  }).catch(console.error);
+  });
 }
 
 export function useStore() {
@@ -34,17 +42,22 @@ export function useStore() {
   const [loading, setLoading] = useState(true);
   const routinesRef = useRef<Routine[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const exercisesRef = useRef<Exercise[]>([]);
 
   useEffect(() => { routinesRef.current = routines; }, [routines]);
+  useEffect(() => { exercisesRef.current = exercises; }, [exercises]);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/routines').then(r => r.json()),
       fetch('/api/folders').then(r => r.json()),
+      fetch('/api/exercises').then(r => r.json()),
     ])
-      .then(([routineData, folderData]) => {
+      .then(([routineData, folderData, exerciseData]) => {
         setRoutines(routineData);
         setFolders(folderData);
+        setExercises(exerciseData);
         setLoading(false);
       })
       .catch(err => {
@@ -54,11 +67,11 @@ export function useStore() {
   }, []);
 
   const getExercise = useCallback((id: string): Exercise | undefined => {
-    return seedExercises.find(e => e.id === id);
+    return exercisesRef.current.find(e => e.id === id);
   }, []);
 
   const filterExercises = useCallback((filters: Filters): Exercise[] => {
-    return seedExercises.filter(ex => {
+    return exercisesRef.current.filter(ex => {
       if (filters.equipment && ex.equipment !== filters.equipment) return false;
       if (filters.position && ex.position !== filters.position) return false;
       if (filters.difficulty && ex.difficulty !== filters.difficulty) return false;
@@ -83,11 +96,11 @@ export function useStore() {
       exercises: [],
     };
     setRoutines(rs => [routine, ...rs]);
-    fetch('/api/routines', {
+    apiWrite('/api/routines', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routine),
-    }).catch(console.error);
+    });
     return routine;
   }, []);
 
@@ -101,7 +114,7 @@ export function useStore() {
 
   const deleteRoutine = useCallback((id: string) => {
     setRoutines(rs => rs.filter(r => r.id !== id));
-    fetch(`/api/routines/${id}`, { method: 'DELETE' }).catch(console.error);
+    apiWrite(`/api/routines/${id}`, { method: 'DELETE' });
   }, []);
 
   const addExerciseToRoutine = useCallback((routineId: string, exerciseId: string) => {
@@ -155,26 +168,26 @@ export function useStore() {
   const createFolder = useCallback((name: string): Folder => {
     const folder: Folder = { id: `folder-${Date.now()}`, name, routineIds: [] };
     setFolders(fs => [...fs, folder]);
-    fetch('/api/folders', {
+    apiWrite('/api/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: folder.id, name }),
-    }).catch(console.error);
+    });
     return folder;
   }, []);
 
   const deleteFolder = useCallback((id: string) => {
     setFolders(fs => fs.filter(f => f.id !== id));
-    fetch(`/api/folders/${id}`, { method: 'DELETE' }).catch(console.error);
+    apiWrite(`/api/folders/${id}`, { method: 'DELETE' });
   }, []);
 
   const renameFolder = useCallback((id: string, name: string) => {
     setFolders(fs => fs.map(f => f.id === id ? { ...f, name } : f));
-    fetch(`/api/folders/${id}`, {
+    apiWrite(`/api/folders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
-    }).catch(console.error);
+    });
   }, []);
 
   const toggleRoutineInFolder = useCallback((routineId: string, folderId: string) => {
@@ -190,18 +203,18 @@ export function useStore() {
           : [...f.routineIds, routineId],
       };
     }));
-    fetch(`/api/folders/${folderId}`, {
+    apiWrite(`/api/folders/${folderId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ routineId, action }),
-    }).catch(console.error);
+    });
   }, []);
 
   return {
     routines,
     loading,
     folders,
-    exercises: seedExercises,
+    exercises,
     getExercise,
     filterExercises,
     createRoutine,
