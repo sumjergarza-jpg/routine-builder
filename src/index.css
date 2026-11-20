@@ -2108,6 +2108,20 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* Folder "⋯" actions menu (reuses .dash-popover / .dash-popover-item) */
+.dash-menu { min-width: 170px; padding: 4px 0; }
+.dash-menu-item {
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+}
+.dash-menu-item svg { color: var(--color-text-secondary); flex-shrink: 0; }
+.dash-menu-item-danger,
+.dash-menu-item-danger svg { color: var(--color-danger); }
+.dash-menu-item-danger:hover { background: #fef2f2; }
+
 .dash-icon-btn-active {
   background: var(--color-primary-light);
   color: var(--color-primary);
