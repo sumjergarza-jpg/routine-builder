@@ -71,23 +71,17 @@ export function TopNav() {
             <IconArrowLeft />
           </button>
         )}
-        <button className="top-nav-brand" onClick={handleBrandClick} aria-label="Go to Dashboard">
+        <button className="top-nav-brand" onClick={handleBrandClick} aria-label="Go to home page">
           <div className="top-nav-logo">
             <IconPlay />
           </div>
-          <span className="top-nav-brand-name">Align Pilates</span>
+          <span className="top-nav-brand-name">Routine Builder</span>
         </button>
       </div>
 
       {/* Center: page title */}
       <div className="top-nav-center">
-        {isDashboard ? (
-          <button className="top-nav-title top-nav-title-link" onClick={handleBrandClick}>
-            {title}
-          </button>
-        ) : (
-          <span className="top-nav-title">{title}</span>
-        )}
+        <span className="top-nav-title">{title}</span>
       </div>
 
       {/* Right: page-injected slot or profile placeholder */}

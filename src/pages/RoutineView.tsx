@@ -96,14 +96,14 @@ export function RoutineView({
     return () => { navInterceptorRef.current = null; };
   }, [handleNavRequest, navInterceptorRef]);
 
-  // Inject "Routine Builder" into TopNav right zone; update when isSaved changes
+  // Inject "Dashboard" into TopNav right zone; update when isSaved changes
   useEffect(() => {
     setRightSlot(
       <button
         className="top-nav-dashboard-link"
         onClick={() => handleNavRequest(() => navigate('/'))}
       >
-        Routine Builder
+        Dashboard
       </button>,
     );
     return () => setRightSlot(null);
